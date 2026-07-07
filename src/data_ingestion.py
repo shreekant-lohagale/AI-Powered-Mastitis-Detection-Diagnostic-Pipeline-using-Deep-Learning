@@ -15,19 +15,24 @@ import yaml
 # ─────────────────────────────────────────────────────
 
 os.makedirs("logs", exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  [%(levelname)-8s]  %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(
-            f"logs/ingestion_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
-            encoding="utf-8"
-        )
-    ]
+
+_fmt = logging.Formatter(
+    "%(asctime)s  [%(levelname)-8s]  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger("data_ingestion")
+logger.setLevel(logging.INFO)
+logger.propagate = False          # prevent duplicate output via root logger
+if not logger.handlers:           # guard against re-adding on re-import
+    _ch = logging.StreamHandler()
+    _ch.setFormatter(_fmt)
+    logger.addHandler(_ch)
+    _fh = logging.FileHandler(
+        f"logs/ingestion_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
+        encoding="utf-8"
+    )
+    _fh.setFormatter(_fmt)
+    logger.addHandler(_fh)
 
 
 def load_config(config_path="config.yaml"):
