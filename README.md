@@ -28,6 +28,7 @@
 - [Training Results](#-training-results)
 - [Evaluation Metrics](#-evaluation-metrics)
 - [Why Recall Matters in Medical AI](#-why-recall-matters-in-medical-ai)
+- [Inference Time](#-inference-time)
 - [Key Features](#-key-features)
 - [Engineering Challenges & Solutions](#-engineering-challenges--solutions)
 - [Project Structure](#-project-structure)
@@ -203,6 +204,31 @@ Actual Mastitis [  0   |  15  ]   ← 0 false negatives (critical ✅)
    Macro avg    0.89       0.60      0.61       20
    Weighted avg 0.84       0.80      0.75       20
 ```
+
+---
+
+## ⚡ Inference Time
+
+> Benchmarked on **CPU only** (Intel, no GPU) — 20 warm runs after graph compilation warm-up.
+
+| Metric | Value |
+|---|---|
+| **Average inference (1 image)** | **82.80 ms** |
+| Min inference (1 image) | 73.18 ms |
+| Max inference (1 image) | 98.04 ms |
+| **Batch inference (20 images)** | **1139.82 ms total** |
+| **Per-image in batch** | **56.99 ms** |
+| Hardware | CPU (no GPU) |
+| Framework | TensorFlow 2.16.2 + oneDNN |
+| Input size | 224 × 224 × 3 |
+
+### Throughput
+```
+Single image : ~83 ms  →  ~12 images/second  (CPU)
+Batch mode   : ~57 ms  →  ~18 images/second  (CPU)
+```
+
+> 💡 **GPU estimate:** On a mid-range GPU (e.g. NVIDIA T4), MobileNetV2 inference typically runs at **5–10 ms/image** — roughly 10× faster than CPU. Suitable for real-time farm-side deployment with a Raspberry Pi + Coral Edge TPU or NVIDIA Jetson.
 
 ---
 
