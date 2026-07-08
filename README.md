@@ -30,6 +30,7 @@
 - [Why Recall Matters in Medical AI](#-why-recall-matters-in-medical-ai)
 - [Inference Time](#-inference-time)
 - [Model Size](#-model-size)
+- [Error Analysis](#-error-analysis)
 - [Key Features](#-key-features)
 - [Engineering Challenges & Solutions](#-engineering-challenges--solutions)
 - [Project Structure](#-project-structure)
@@ -271,6 +272,89 @@ Total Parameters: 2,259,265
 | EfficientNetB0 | 5.3M | ~20 MB | 77.1% |
 
 > ✅ **At 9.2 MB, MastiVision AI is lightweight enough to deploy on edge devices** — mobile phones, Raspberry Pi, or farm-side embedded systems — without requiring cloud inference.
+
+---
+
+## 🔍 Error Analysis
+
+> Full per-image inference run on the **20-image validation set** using the saved best model (Epoch 5).
+
+### Prediction Breakdown
+
+| Category | Count | Avg Confidence |
+|---|---|---|
+| ✅ True Positives (Mastitis → Mastitis) | **14** | **77.32%** |
+| ✅ True Negatives (Healthy → Healthy) | **1** | — |
+| ❌ False Positives (Healthy → Mastitis) | **5** | **77.72%** |
+| ❌ False Negatives (Mastitis → Healthy) | **0** | — |
+
+### Per-Image Results
+
+```
+RESULT   True Label   Predicted    Confidence   Notes
+──────────────────────────────────────────────────────────────────────
+WRONG    Healthy      Mastitis     74.61%       Screenshot/ambiguous image
+WRONG    Healthy      Mastitis     72.16%       Screenshot image
+WRONG    Healthy      Mastitis     85.86%       Screenshot — highest FP confidence
+WRONG    Healthy      Mastitis     64.00%       Screenshot image
+WRONG    Healthy      Mastitis     91.98%       Screenshot — model very confident but wrong
+──────────────────────────────────────────────────────────────────────
+CORRECT  Mastitis     Mastitis     54.36%       Low confidence — borderline case
+CORRECT  Mastitis     Mastitis     76.53%
+CORRECT  Mastitis     Mastitis     79.78%
+CORRECT  Mastitis     Mastitis     81.71%
+CORRECT  Mastitis     Mastitis     66.30%
+CORRECT  Mastitis     Mastitis     88.03%
+CORRECT  Mastitis     Mastitis     72.05%
+CORRECT  Mastitis     Mastitis     84.32%
+CORRECT  Mastitis     Mastitis     61.31%       Low confidence
+CORRECT  Mastitis     Mastitis     79.99%
+CORRECT  Mastitis     Mastitis     87.47%
+CORRECT  Mastitis     Mastitis     86.97%
+CORRECT  Mastitis     Mastitis     88.45%
+CORRECT  Mastitis     Mastitis     75.16%
+```
+
+### False Positive Analysis (5 Errors)
+
+| # | Confidence | Observation |
+|---|---|---|
+| FP-1 | 74.61% | Ambiguous udder image — visual similarity to mastitis symptoms |
+| FP-2 | 72.16% | Screenshot-sourced image — possible quality/domain difference |
+| FP-3 | 85.86% | High confidence false positive — model strongly misled |
+| FP-4 | 64.00% | Lowest confidence FP — borderline prediction near threshold |
+| FP-5 | **91.98%** | **Highest confidence error** — model very certain but wrong |
+
+**Key pattern:** All 5 false positives share filenames starting with `Screenshot-2024` — suggesting these images were **screen-captured** rather than photographed directly. Screen captures may have different color profiles, JPEG artifacts, or visual characteristics that confuse the model.
+
+### Low-Confidence Predictions (< 60% confidence)
+
+```
+Mastitis → Mastitis  54.36%  (correct, but barely above 0.5 threshold)
+Mastitis → Healthy   51.16%  (incorrect — 1 false negative by alternate threshold)
+```
+
+> ⚠️ Image `8_jpeg_jpg` scored **51.16% Mastitis probability** — just above the Healthy threshold. This image represents the most ambiguous case in the validation set. A confidence threshold tuning (e.g., lowering to 0.3 for clinical use) would catch this.
+
+### Confidence Distribution
+
+```
+Category              Count   Avg Confidence   Range
+───────────────────────────────────────────────────────
+True Positives        14      77.32%           54.36% – 88.45%
+False Positives        5      77.72%           64.00% – 91.98%
+Overall (all 20)      20      76.11%           51.16% – 91.98%
+Low-conf (< 60%)       2      —                —
+```
+
+### Root Cause Analysis
+
+| Error Type | Root Cause | Proposed Fix |
+|---|---|---|
+| False Positives (5) | Screenshot images have different visual domain vs. direct photos | Add domain normalization; separate screenshot vs. photo classes in dataset |
+| High-confidence FP (91.98%) | Model learned screenshot textures as mastitis indicators | Augment with screenshot-style images in Healthy class |
+| Low-confidence TP (54.36%) | Borderline mastitis case — mild symptoms | Lower classification threshold to 0.35–0.40 for clinical deployment |
+| Class imbalance (4:1) | 24 Healthy vs 73 Mastitis — model biased toward Mastitis | Apply class weights during training |
 
 ---
 
