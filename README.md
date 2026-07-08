@@ -29,6 +29,7 @@
 - [Evaluation Metrics](#-evaluation-metrics)
 - [Why Recall Matters in Medical AI](#-why-recall-matters-in-medical-ai)
 - [Inference Time](#-inference-time)
+- [Model Size](#-model-size)
 - [Key Features](#-key-features)
 - [Engineering Challenges & Solutions](#-engineering-challenges--solutions)
 - [Project Structure](#-project-structure)
@@ -229,6 +230,47 @@ Batch mode   : ~57 ms  →  ~18 images/second  (CPU)
 ```
 
 > 💡 **GPU estimate:** On a mid-range GPU (e.g. NVIDIA T4), MobileNetV2 inference typically runs at **5–10 ms/image** — roughly 10× faster than CPU. Suitable for real-time farm-side deployment with a Raspberry Pi + Coral Edge TPU or NVIDIA Jetson.
+
+---
+
+## 📦 Model Size
+
+> Measured from `checkpoints/best_model.keras` — saved in Keras v3 format.
+
+| Metric | Value |
+|---|---|
+| **File size on disk** | **9.20 MB** |
+| File size (bytes) | 9,647,466 bytes |
+| **Total parameters** | **2,259,265** |
+| Trainable parameters | **1,281** ← Custom head only |
+| Frozen parameters | 2,257,984 ← MobileNetV2 backbone |
+| Total layers | 6 |
+| Format | Keras v3 (`.keras`) |
+
+### Parameter Breakdown
+
+```
+Total Parameters: 2,259,265
+│
+├── MobileNetV2 Backbone (FROZEN)  2,257,984  (99.94%)
+│     └─ Pre-trained ImageNet weights, not updated during training
+│
+└── Custom Classification Head (TRAINED)  1,281  (0.06%)
+      ├─ Dense(1, sigmoid)  → 1,281 parameters
+      └─ Only these weights were learned on the mastitis dataset
+```
+
+### Comparison to Other Models
+
+| Model | Parameters | Size | Top-1 Accuracy (ImageNet) |
+|---|---|---|---|
+| **MastiVision (ours)** | **2.26M** | **9.2 MB** | — (domain-specific) |
+| MobileNetV2 | 3.4M | ~14 MB | 71.8% |
+| ResNet50 | 25.6M | ~98 MB | 76.0% |
+| VGG16 | 138M | ~528 MB | 71.3% |
+| EfficientNetB0 | 5.3M | ~20 MB | 77.1% |
+
+> ✅ **At 9.2 MB, MastiVision AI is lightweight enough to deploy on edge devices** — mobile phones, Raspberry Pi, or farm-side embedded systems — without requiring cloud inference.
 
 ---
 
